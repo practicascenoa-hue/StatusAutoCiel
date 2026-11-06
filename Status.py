@@ -10,7 +10,7 @@ sheet_url = "https://docs.google.com/spreadsheets/d/1ebc3X1sEHvKL003Tq3hSTTcVmKf
 
 df_ayuda = conn.read(
     spreadsheet=sheet_url, 
-    worksheet="STATUS Peugeott"
+    worksheet="STATUS_Peugeott"
 )
 
 st.dataframe(df_ayuda, use_container_width=True, hide_index=True)
