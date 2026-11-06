@@ -4,7 +4,7 @@ from streamlit_gsheets import GSheetsConnection
 st.subheader("Estado - Peugeot")
 
 conn = st.connection("gsheets", type=GSheetsConnection)
-sheet_url = "https://docs.google.com/spreadsheets/d/1ebc3X1sEHvKL003Tq3hSTTcVmKfgFpjIUSx53JjutPE/edit?gid=533036020#gid=533036020"
+sheet_url = "https://docs.google.com/spreadsheets/d/1ebc3X1sEHvKL003Tq3hSTTcVmKfgFpjIUSx53JjutPE/edit"
 
 # Leemos la nueva hoja (asegúrate de que el nombre sea exactamente igual en tu Excel, respetando espacios y la doble T)
 df_ayuda = conn.read(
