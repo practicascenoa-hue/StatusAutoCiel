@@ -107,8 +107,3 @@ columnas_finales = [df_mostrar.columns[i] for i in indices_validos]
 
 st.subheader(f"Detalle de Unidades — {st.session_state.marca_seleccionada} ({len(df_mostrar)} registros)")
 st.dataframe(df_mostrar[columnas_finales], use_container_width=True, hide_index=True)
-
-with tab_citroen:
-    st.header("Estado - Citroën")
-    df_citroen = cargar_datos(URL_CITROEN)
-    renderizar_tablero(df_citroen, "Citroën")
