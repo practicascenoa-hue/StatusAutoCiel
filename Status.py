@@ -4,7 +4,7 @@ import plotly.express as px
 
 st.set_page_config(page_title="Estado de Vehículos", layout="wide")
 
-# URLs de exportación directa (reemplaza TU_GID_PEUGEOT y TU_GID_CITROEN con los números reales de tus solapas)
+# URLs de exportación directa
 URL_PEUGEOT = "https://docs.google.com/spreadsheets/d/1ebc3X1sEHvKL003Tq3hSTTcVmKfgFpjIUSx53JjutPE/export?format=csv&gid=533036020#gid=533036020"
 URL_CITROEN = "https://docs.google.com/spreadsheets/d/1ebc3X1sEHvKL003Tq3hSTTcVmKfgFpjIUSx53JjutPE/export?format=csv&gid=1779651149"
 
@@ -80,7 +80,7 @@ with col_canal:
 
 st.divider()
 
-# ---------------- FILTRADO PRINCIPAL ----------------
+# ---------------- FILTRADO PRINCIPAL POR CANAL ----------------
 df_mostrar = df.copy()
 
 if st.session_state.canal_seleccionado != "TODOS":
@@ -88,45 +88,59 @@ if st.session_state.canal_seleccionado != "TODOS":
         df_mostrar[col_canal_nombre].fillna("Sin especificar").astype(str) == st.session_state.canal_seleccionado
     ]
 
-# ---------------- GRÁFICO DINÁMICO (Columna K) ----------------
-# Extraemos el nombre de la columna K
+# ---------------- GRÁFICO DINÁMICO E INTERACTIVO (Columna K) ----------------
 col_estado_nombre = df.columns[letra_a_indice("K")]
-total_filtrado = len(df_mostrar)
+total_filtrado_canal = len(df_mostrar)
 
-if total_filtrado > 0:
-    # Agrupamos y contamos los estados del dataframe filtrado
+if total_filtrado_canal > 0:
     df_estados = df_mostrar[col_estado_nombre].fillna("Sin especificar").astype(str).value_counts().reset_index()
     df_estados.columns = ['Estado', 'Cantidad']
     
-    # Calculamos porcentajes y creamos la etiqueta para el gráfico
-    df_estados['Porcentaje'] = (df_estados['Cantidad'] / total_filtrado * 100).round(1)
+    df_estados['Porcentaje'] = (df_estados['Cantidad'] / total_filtrado_canal * 100).round(1)
     df_estados['Etiqueta'] = df_estados['Cantidad'].astype(str) + " (" + df_estados['Porcentaje'].astype(str) + "%)"
     
     st.subheader(f"Distribución de Estados — Canal: {st.session_state.canal_seleccionado}")
     
-    # Creamos el gráfico de barras con Plotly
     fig = px.bar(
         df_estados, 
         x='Estado', 
         y='Cantidad', 
         text='Etiqueta',
-        color='Estado', # Opcional: asigna un color distinto a cada estado
+        color='Estado', 
         template="plotly_white"
     )
-    # Configuramos para que el texto salga arriba de la barra y se vea limpio
+    
     fig.update_traces(textposition='outside')
     fig.update_layout(
         showlegend=False, 
         xaxis_title="", 
         yaxis_title="Cantidad de Unidades",
-        margin=dict(t=10, b=10) # Ajusta los márgenes para no ocupar tanto espacio
+        margin=dict(t=10, b=10)
     )
     
-    st.plotly_chart(fig, use_container_width=True)
+    # Capturamos el evento de clic en el gráfico
+    evento_grafico = st.plotly_chart(
+        fig, 
+        use_container_width=True, 
+        on_select="rerun", 
+        key="grafico_interactivo"
+    )
+
+    # Revisamos si el usuario hizo clic en alguna barra
+    if evento_grafico and len(evento_grafico.selection.get("points", [])) > 0:
+        # Extraemos el nombre del estado clickeado (eje X)
+        estado_seleccionado = evento_grafico.selection["points"][0]["x"]
+        
+        # Filtramos el dataframe para la tabla de abajo
+        df_mostrar = df_mostrar[
+            df_mostrar[col_estado_nombre].fillna("Sin especificar").astype(str) == estado_seleccionado
+        ]
+        
+        st.info(f"Filtro activo: Mostrando solo unidades en estado **{estado_seleccionado}**. Haz clic en un espacio vacío del gráfico para quitar el filtro.")
 
 st.divider()
 
-# ---------------- TABLA DE DETALLES ----------------
+# ---------------- TABLA DE DETALLES FINAL ----------------
 col_a_nombre = df.columns[0]
 df_mostrar["Cliente"] = df_mostrar[col_a_nombre]
 
@@ -138,5 +152,6 @@ columnas_finales = [df_mostrar.columns[i] for i in indices_validos]
 
 columnas_finales_con_cliente = ["Cliente"] + columnas_finales
 
-st.subheader(f"Detalle de Unidades — {st.session_state.marca_seleccionada} ({total_filtrado} registros)")
+# Actualizamos el total para que refleje si hay un filtro de gráfico aplicado
+st.subheader(f"Detalle de Unidades — {st.session_state.marca_seleccionada} ({len(df_mostrar)} registros)")
 st.dataframe(df_mostrar[columnas_finales_con_cliente], use_container_width=True, hide_index=True)
