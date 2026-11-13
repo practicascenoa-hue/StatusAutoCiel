@@ -3,7 +3,7 @@ import pandas as pd
 
 st.set_page_config(page_title="Estado de Vehículos", layout="wide")
 
-# URLs con &range=A:AZ para forzar la lectura completa y evitar que los filtros del Google Sheet afecten al portal
+# URLs para ambas marcas con &range=A:AZ para evitar que los filtros del Google Sheet afecten al portal
 URL_PEUGEOT = "https://docs.google.com/spreadsheets/d/1ebc3X1sEHvKL003Tq3hSTTcVmKfgFpjIUSx53JjutPE/gviz/tq?tqx=out:csv&sheet=STATUS_Peugeott&range=A:AZ"
 URL_CITROEN = "https://docs.google.com/spreadsheets/d/1ebc3X1sEHvKL003Tq3hSTTcVmKfgFpjIUSx53JjutPE/gviz/tq?tqx=out:csv&sheet=STATUS_CITROEN&range=A:AZ"
 
