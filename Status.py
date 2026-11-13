@@ -14,68 +14,99 @@ def cargar_datos(url):
     df.columns = df.columns.str.strip()
     return df
 
-def renderizar_tablero(df, marca):
-    # Mapeo seguro por posición de columna (D=3, F=5, G=6, J=9, AP=41)
-    col_canal = df.columns[3]          # Columna D: Canal Vta.
-    col_modelo = df.columns[5]         # Columna F: Modelo
-    col_color = df.columns[6]          # Columna G: Color
-    col_estado = df.columns[9]         # Columna J: Estado
-    col_estado_unidad = df.columns[41] # Columna AP: Estado de la unidad
+# Función auxiliar para convertir letra de Excel a índice numérico (A=0, B=1, ..., AQ=42)
+def letra_a_indice(letra):
+    indice = 0
+    for c in letra:
+        indice = indice * 26 + (ord(c.upper()) - ord('A')) + 1
+    return indice - 1
 
-    st.subheader("Filtros de Búsqueda")
+# Inicializar estados de sesión para manejar los botones de forma persistente
+if "marca_seleccionada" not in st.session_state:
+    st.session_state.marca_seleccionada = "Peugeot"
+
+if "canal_seleccionado" not in st.session_state:
+    st.session_state.canal_seleccionado = "TODOS"
+
+st.title("Tablero de Estado de Vehículos")
+
+# --- SECCIÓN SUPERIOR: MARCA (Izquierda) Y CANAL DE VENTA (Derecha) ---
+col_marca, col_canal = st.columns([1, 3])
+
+with col_marca:
+    st.subheader("MARCA")
+    b1, b2 = st.columns(2)
+    with b1:
+        tipo_p = "primary" if st.session_state.marca_seleccionada == "Peugeot" else "secondary"
+        if st.button("🚗 Peugeot", use_container_width=True, type=tipo_p):
+            st.session_state.marca_seleccionada = "Peugeot"
+            st.session_state.canal_seleccionado = "TODOS" # Reiniciar filtro al cambiar marca
+            st.rerun()
+    with b2:
+        tipo_c = "primary" if st.session_state.marca_seleccionada == "Citroën" else "secondary"
+        if st.button("🚘 Citroën", use_container_width=True, type=tipo_c):
+            st.session_state.marca_seleccionada = "Citroën"
+            st.session_state.canal_seleccionado = "TODOS" # Reiniciar filtro al cambiar marca
+            st.rerun()
+
+# Cargar datos según la marca seleccionada
+if st.session_state.marca_seleccionada == "Peugeot":
+    df = cargar_datos(URL_PEUGEOT)
+else:
+    df = cargar_datos(URL_CITROEN)
+
+# Obtener nombre real de la Columna E (índice 4) para el Canal de Venta
+col_canal_nombre = df.columns[letra_a_indice("E")]
+
+# Calcular totales y porcentajes por Canal de Venta
+total_unidades = len(df)
+conteo_canales = df[col_canal_nombre].fillna("Sin especificar").astype(str).value_counts()
+
+with col_canal:
+    st.subheader(f"Canal de Venta — Total: {total_unidades} (100%)")
     
-    # 5 columnas horizontales para los desplegables
-    c1, c2, c3, c4, c5 = st.columns(5)
+    # Botón para ver el 100% + un botón por cada valor único de la columna E
+    num_botones = len(conteo_canales) + 1
+    cols_botones = st.columns(num_botones)
+    
+    # Botón Total (100%)
+    with cols_botones[0]:
+        tipo_todos = "primary" if st.session_state.canal_seleccionado == "TODOS" else "secondary"
+        if st.button(f"Todos\n{total_unidades} (100%)", use_container_width=True, type=tipo_todos):
+            st.session_state.canal_seleccionado = "TODOS"
+            st.rerun()
+            
+    # Botones dinámicos por cada estado/canal de la Columna E
+    for idx, (canal, cantidad) in enumerate(conteo_canales.items(), start=1):
+        porcentaje = (cantidad / total_unidades * 100) if total_unidades > 0 else 0
+        etiqueta = f"{canal}\n{cantidad} ({porcentaje:.1f}%)"
+        tipo_btn = "primary" if st.session_state.canal_seleccionado == canal else "secondary"
+        
+        with cols_botones[idx]:
+            if st.button(etiqueta, use_container_width=True, type=tipo_btn, key=f"btn_{canal}"):
+                st.session_state.canal_seleccionado = canal
+                st.rerun()
 
-    with c1:
-        opciones_canal = sorted(df[col_canal].dropna().astype(str).unique())
-        sel_canal = st.multiselect("Canal Vta.", opciones_canal, placeholder="Todos", key=f"{marca}_canal")
+st.divider()
 
-    with c2:
-        opciones_modelo = sorted(df[col_modelo].dropna().astype(str).unique())
-        sel_modelo = st.multiselect("Modelo", opciones_modelo, placeholder="Todos", key=f"{marca}_modelo")
+# --- FILTRADO Y TABLA FINAL ---
+df_mostrar = df.copy()
 
-    with c3:
-        opciones_color = sorted(df[col_color].dropna().astype(str).unique())
-        sel_color = st.multiselect("Color", opciones_color, placeholder="Todos", key=f"{marca}_color")
+if st.session_state.canal_seleccionado != "TODOS":
+    df_mostrar = df_mostrar[
+        df_mostrar[col_canal_nombre].fillna("Sin especificar").astype(str) == st.session_state.canal_seleccionado
+    ]
 
-    with c4:
-        opciones_estado = sorted(df[col_estado].dropna().astype(str).unique())
-        sel_estado = st.multiselect("Estado", opciones_estado, placeholder="Todos", key=f"{marca}_estado")
+# Selección de las columnas solicitadas: B, G, H, I, K, L, M, N, AQ
+letras_columnas = ["B", "G", "H", "I", "K", "L", "M", "N", "AQ"]
+indices_columnas = [letra_a_indice(letra) for letra in letras_columnas]
 
-    with c5:
-        opciones_est_unidad = sorted(df[col_estado_unidad].dropna().astype(str).unique())
-        sel_est_unidad = st.multiselect("Estado de la unidad", opciones_est_unidad, placeholder="Todos", key=f"{marca}_est_unidad")
+# Validamos que el DataFrame tenga suficientes columnas para evitar errores si cambia el sheet
+indices_validos = [i for i in indices_columnas if i < len(df_mostrar.columns)]
+columnas_finales = [df_mostrar.columns[i] for i in indices_validos]
 
-    # Aplicar filtros dinámicos
-    df_filtrado = df.copy()
-
-    if sel_canal:
-        df_filtrado = df_filtrado[df_filtrado[col_canal].astype(str).isin(sel_canal)]
-    if sel_modelo:
-        df_filtrado = df_filtrado[df_filtrado[col_modelo].astype(str).isin(sel_modelo)]
-    if sel_color:
-        df_filtrado = df_filtrado[df_filtrado[col_color].astype(str).isin(sel_color)]
-    if sel_estado:
-        df_filtrado = df_filtrado[df_filtrado[col_estado].astype(str).isin(sel_estado)]
-    if sel_est_unidad:
-        df_filtrado = df_filtrado[df_filtrado[col_estado_unidad].astype(str).isin(sel_est_unidad)]
-
-    st.divider()
-
-    # Métrica rápida del resultado filtrado
-    st.metric(label=f"Total Unidades {marca}", value=len(df_filtrado))
-
-    # Tabla principal
-    st.dataframe(df_filtrado, use_container_width=True, hide_index=True)
-
-# Crear las pestañas para cada marca
-tab_peugeot, tab_citroen = st.tabs(["🚗 Peugeot", "🚘 Citroën"])
-
-with tab_peugeot:
-    st.header("Estado - Peugeot")
-    df_peugeot = cargar_datos(URL_PEUGEOT)
-    renderizar_tablero(df_peugeot, "Peugeot")
+st.subheader(f"Detalle de Unidades — {st.session_state.marca_seleccionada} ({len(df_mostrar)} registros)")
+st.dataframe(df_mostrar[columnas_finales], use_container_width=True, hide_index=True)
 
 with tab_citroen:
     st.header("Estado - Citroën")
