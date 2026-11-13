@@ -3,9 +3,9 @@ import pandas as pd
 
 st.set_page_config(page_title="Estado de Vehículos", layout="wide")
 
-# URLs para leer las hojas de Google Sheets en formato CSV
-URL_PEUGEOT = "https://docs.google.com/spreadsheets/d/1ebc3X1sEHvKL003Tq3hSTTcVmKfgFpjIUSx53JjutPE/gviz/tq?tqx=out:csv&sheet=STATUS_Peugeott"
-URL_CITROEN = "https://docs.google.com/spreadsheets/d/1ebc3X1sEHvKL003Tq3hSTTcVmKfgFpjIUSx53JjutPE/gviz/tq?tqx=out:csv&sheet=STATUS_CITROEN"
+# URLs actualizadas con &tq=select+* para ignorar los filtros del Google Sheet y traer siempre todos los datos
+URL_PEUGEOT = "https://docs.google.com/spreadsheets/d/1ebc3X1sEHvKL003Tq3hSTTcVmKfgFpjIUSx53JjutPE/gviz/tq?tq=select+*&tqx=out:csv&sheet=STATUS_Peugeott"
+URL_CITROEN = "https://docs.google.com/spreadsheets/d/1ebc3X1sEHvKL003Tq3hSTTcVmKfgFpjIUSx53JjutPE/gviz/tq?tq=select+*&tqx=out:csv&sheet=STATUS_CITROEN"
 
 @st.cache_data(ttl=60)
 def cargar_datos(url):
@@ -58,7 +58,7 @@ else:
 # Obtener nombre real de la Columna E (índice 4) para el Canal de Venta
 col_canal_nombre = df.columns[letra_a_indice("E")]
 
-# Calcular totales y porcentajes por Canal de Venta
+# Calcular totales y porcentajes por Canal de Venta (sobre el total completo)
 total_unidades = len(df)
 conteo_canales = df[col_canal_nombre].fillna("Sin especificar").astype(str).value_counts()
 
@@ -97,7 +97,7 @@ if st.session_state.canal_seleccionado != "TODOS":
         df_mostrar[col_canal_nombre].fillna("Sin especificar").astype(str) == st.session_state.canal_seleccionado
     ]
 
-# Extraemos la Columna A (índice 0) y le cambiamos el nombre temporalmente a "Cliente"
+# Extraemos la Columna A (índice 0) y le asignamos el nombre "Cliente"
 col_a_nombre = df.columns[0]
 df_mostrar["Cliente"] = df_mostrar[col_a_nombre]
 
