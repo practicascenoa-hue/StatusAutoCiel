@@ -97,13 +97,20 @@ if st.session_state.canal_seleccionado != "TODOS":
         df_mostrar[col_canal_nombre].fillna("Sin especificar").astype(str) == st.session_state.canal_seleccionado
     ]
 
+# Extraemos la Columna A (índice 0) y le cambiamos el nombre temporalmente a "Cliente"
+col_a_nombre = df.columns[0]
+df_mostrar["Cliente"] = df_mostrar[col_a_nombre]
+
 # Selección de las columnas solicitadas: B, G, H, I, K, L, M, N, AQ
 letras_columnas = ["B", "G", "H", "I", "K", "L", "M", "N", "AQ"]
 indices_columnas = [letra_a_indice(letra) for letra in letras_columnas]
 
-# Validamos que el DataFrame tenga suficientes columnas para evitar errores si cambia el sheet
+# Validamos que el DataFrame tenga suficientes columnas
 indices_validos = [i for i in indices_columnas if i < len(df_mostrar.columns)]
 columnas_finales = [df_mostrar.columns[i] for i in indices_validos]
 
+# Reordenamos para que "Cliente" quede primera y luego las demás columnas seleccionadas
+columnas_finales_con_cliente = ["Cliente"] + columnas_finales
+
 st.subheader(f"Detalle de Unidades — {st.session_state.marca_seleccionada} ({len(df_mostrar)} registros)")
-st.dataframe(df_mostrar[columnas_finales], use_container_width=True, hide_index=True)
+st.dataframe(df_mostrar[columnas_finales_con_cliente], use_container_width=True, hide_index=True)
