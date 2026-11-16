@@ -28,57 +28,63 @@ if "canal_seleccionado" not in st.session_state:
 
 st.title("Tablero de Estado de Vehículos")
 
-col_marca, col_canal = st.columns([1, 3])
+# ---------------- FILA 1: SECCIÓN MARCA ----------------
+st.subheader("MARCA")
+# Usamos columnas pequeñas a la izquierda para los botones, y dejamos el resto vacío
+col_b1, col_b2, espacio_vacio = st.columns([1, 1, 4]) 
 
-with col_marca:
-    st.subheader("MARCA")
-    b1, b2 = st.columns(2)
-    with b1:
-        tipo_p = "primary" if st.session_state.marca_seleccionada == "Peugeot" else "secondary"
-        if st.button("🚗 Peugeot", use_container_width=True, type=tipo_p):
-            st.session_state.marca_seleccionada = "Peugeot"
-            st.session_state.canal_seleccionado = "TODOS"
-            st.rerun()
-    with b2:
-        tipo_c = "primary" if st.session_state.marca_seleccionada == "Citroën" else "secondary"
-        if st.button("🚘 Citroën", use_container_width=True, type=tipo_c):
-            st.session_state.marca_seleccionada = "Citroën"
-            st.session_state.canal_seleccionado = "TODOS"
-            st.rerun()
+with col_b1:
+    tipo_p = "primary" if st.session_state.marca_seleccionada == "Peugeot" else "secondary"
+    if st.button("🚗 Peugeot", use_container_width=True, type=tipo_p):
+        st.session_state.marca_seleccionada = "Peugeot"
+        st.session_state.canal_seleccionado = "TODOS"
+        st.rerun()
 
+with col_b2:
+    tipo_c = "primary" if st.session_state.marca_seleccionada == "Citroën" else "secondary"
+    if st.button("🚘 Citroën", use_container_width=True, type=tipo_c):
+        st.session_state.marca_seleccionada = "Citroën"
+        st.session_state.canal_seleccionado = "TODOS"
+        st.rerun()
+
+
+# --- CARGA DE DATOS ---
 if st.session_state.marca_seleccionada == "Peugeot":
     df = cargar_datos(URL_PEUGEOT)
 else:
     df = cargar_datos(URL_CITROEN)
 
 col_canal_nombre = df.columns[letra_a_indice("E")]
-
 total_unidades = len(df)
 conteo_canales = df[col_canal_nombre].fillna("Sin especificar").astype(str).value_counts()
 
-with col_canal:
-    st.subheader(f"Canal de Venta — Total: {total_unidades} (100%)")
-    
-    num_botones = len(conteo_canales) + 1
-    cols_botones = st.columns(num_botones)
-    
-    with cols_botones[0]:
-        tipo_todos = "primary" if st.session_state.canal_seleccionado == "TODOS" else "secondary"
-        if st.button(f"Todos\n{total_unidades} (100%)", use_container_width=True, type=tipo_todos):
-            st.session_state.canal_seleccionado = "TODOS"
-            st.rerun()
-            
-    for idx, (canal, cantidad) in enumerate(conteo_canales.items(), start=1):
-        porcentaje = (cantidad / total_unidades * 100) if total_unidades > 0 else 0
-        etiqueta = f"{canal}\n{cantidad} ({porcentaje:.1f}%)"
-        tipo_btn = "primary" if st.session_state.canal_seleccionado == canal else "secondary"
+st.write("") # Un pequeño espacio en blanco para separar
+
+# ---------------- FILA 2: SECCIÓN CANAL DE VENTA ----------------
+st.subheader(f"Canal de Venta — Total: {total_unidades} (100%)")
+
+num_botones = len(conteo_canales) + 1
+cols_botones = st.columns(num_botones)
+
+with cols_botones[0]:
+    tipo_todos = "primary" if st.session_state.canal_seleccionado == "TODOS" else "secondary"
+    if st.button(f"Todos\n{total_unidades} (100%)", use_container_width=True, type=tipo_todos):
+        st.session_state.canal_seleccionado = "TODOS"
+        st.rerun()
         
-        with cols_botones[idx]:
-            if st.button(etiqueta, use_container_width=True, type=tipo_btn, key=f"btn_{canal}"):
-                st.session_state.canal_seleccionado = canal
-                st.rerun()
+for idx, (canal, cantidad) in enumerate(conteo_canales.items(), start=1):
+    porcentaje = (cantidad / total_unidades * 100) if total_unidades > 0 else 0
+    etiqueta = f"{canal}\n{cantidad} ({porcentaje:.1f}%)"
+    tipo_btn = "primary" if st.session_state.canal_seleccionado == canal else "secondary"
+    
+    with cols_botones[idx]:
+        if st.button(etiqueta, use_container_width=True, type=tipo_btn, key=f"btn_{canal}"):
+            st.session_state.canal_seleccionado = canal
+            st.rerun()
 
 st.divider()
+
+# (A partir de aquí sigue igual tu código de ---------------- FILTRADO PRINCIPAL POR CANAL ----------------)
 
 # ---------------- FILTRADO PRINCIPAL POR CANAL ----------------
 df_mostrar = df.copy()
