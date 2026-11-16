@@ -148,7 +148,7 @@ if total_filtrado_canal > 0:
 # ---------------- TABLA DE DETALLES FINAL ----------------
 col_a_nombre = df.columns[0]
 # Identificamos la columna del Chasis/VIN (asumiendo que es la H)
-col_vin_nombre = df.columns[letra_a_indice("H")] 
+col_vin_nombre = df.columns[letra_a_indice("I")]
 
 df_mostrar["Cliente"] = df_mostrar[col_a_nombre]
 
