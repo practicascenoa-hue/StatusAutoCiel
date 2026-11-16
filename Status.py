@@ -147,8 +147,32 @@ if total_filtrado_canal > 0:
 
 # ---------------- TABLA DE DETALLES FINAL ----------------
 col_a_nombre = df.columns[0]
+# Identificamos la columna del Chasis/VIN (asumiendo que es la H)
+col_vin_nombre = df.columns[letra_a_indice("H")] 
+
 df_mostrar["Cliente"] = df_mostrar[col_a_nombre]
 
+# 1. Lógica de iconos evaluando Chasis y Estado
+def agregar_icono(fila):
+    estado = str(fila[col_estado_nombre]).strip()
+    vin = str(fila[col_vin_nombre]).strip()
+    
+    # Verificamos si la celda de VIN tiene datos reales
+    tiene_vin = vin != "" and vin.lower() != "nan" and vin.lower() != "none"
+    
+    if "Canceled" in estado:
+        return "❌ " + estado
+    elif tiene_vin:
+        return "✅ " + estado
+    elif "Accepted" in estado:
+        return "⏳ " + estado  # <-- ¡Acá está el reloj de arena!
+    else:
+        return estado
+# Aplicamos los iconos a la columna de estado antes de darle color
+df_mostrar[col_estado_nombre] = df_mostrar.apply(agregar_icono, axis=1)
+
+
+# 2. Preparamos las columnas a mostrar
 letras_columnas = ["B", "G", "H", "I", "K", "L", "M", "N", "AQ"]
 indices_columnas = [letra_a_indice(letra) for letra in letras_columnas]
 
@@ -159,22 +183,25 @@ columnas_finales_con_cliente = ["Cliente"] + columnas_finales
 
 st.subheader(f"Detalle de Unidades — {st.session_state.marca_seleccionada} ({len(df_mostrar)} registros)")
 
-# 1. Definimos la función que asigna el color CSS según el texto de la celda
-def colorear_estados(valor):
-    mapa_colores_css = {
-        "Documents printed": "background-color: #85C1E9; color: black;",
-        "Accepted": "background-color: #F9E79F; color: black;",
-        "Consigned": "background-color: #ABEBC6; color: black;",
-        "Canceled": "background-color: #E74C3C; color: white;", # Letra blanca para contrastar con el rojo
-        "Sin especificar": "background-color: #D5D8DC; color: black;"
-    }
-    return mapa_colores_css.get(str(valor).strip(), "")
 
-# 2. Aplicamos el estilo solo a la columna del estado (col_estado_nombre)
+# 3. Ajustamos la función de color para que detecte el texto ignorando el emoji
+def colorear_estados(valor):
+    texto = str(valor)
+    if "Documents printed" in texto:
+        return "background-color: #85C1E9; color: black;"
+    elif "Accepted" in texto:
+        return "background-color: #F9E79F; color: black;"
+    elif "Consigned" in texto:
+        return "background-color: #ABEBC6; color: black;"
+    elif "Canceled" in texto:
+        return "background-color: #E74C3C; color: white;"
+    else:
+        return "background-color: #D5D8DC; color: black;"
+
+# 4. Aplicamos el estilo a la tabla
 df_estilizado = df_mostrar[columnas_finales_con_cliente].style.map(
     colorear_estados, 
     subset=[col_estado_nombre]
 )
 
-# 3. Mostramos el DataFrame estilizado
 st.dataframe(df_estilizado, use_container_width=True, hide_index=True)
