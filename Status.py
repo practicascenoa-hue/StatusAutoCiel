@@ -89,8 +89,18 @@ if st.session_state.canal_seleccionado != "TODOS":
     ]
 
 # ---------------- GRÁFICO DINÁMICO DESPLEGABLE (Columna K) ----------------
+# ---------------- GRÁFICO DINÁMICO DESPLEGABLE (Columna K) ----------------
 col_estado_nombre = df.columns[letra_a_indice("K")]
 total_filtrado_canal = len(df_mostrar)
+
+# NUEVO: Diccionario de colores para los estados
+mapa_colores = {
+    "Documents printed": "#85C1E9",  # Azul claro
+    "Accepted": "#F9E79F",           # Amarillo claro
+    "Consigned": "#ABEBC6",          # Verde claro
+    "Canceled": "#E74C3C",           # Rojo
+    "Sin especificar": "#D5D8DC"     # Gris por si hay algún campo vacío
+}
 
 if total_filtrado_canal > 0:
     df_estados = df_mostrar[col_estado_nombre].fillna("Sin especificar").astype(str).value_counts().reset_index()
@@ -99,7 +109,6 @@ if total_filtrado_canal > 0:
     df_estados['Porcentaje'] = (df_estados['Cantidad'] / total_filtrado_canal * 100).round(1)
     df_estados['Etiqueta'] = df_estados['Cantidad'].astype(str) + " (" + df_estados['Porcentaje'].astype(str) + "%)"
     
-    # ACÁ ESTÁ EL CAMBIO: expanded=False hace que arranque oculto (cerrado)
     with st.expander(f"📊 Ver distribución de Estados — Canal: {st.session_state.canal_seleccionado}", expanded=False):
         
         fig = px.bar(
@@ -108,6 +117,7 @@ if total_filtrado_canal > 0:
             y='Cantidad', 
             text='Etiqueta',
             color='Estado', 
+            color_discrete_map=mapa_colores, # <-- Aquí aplicamos tu paleta de colores
             template="plotly_white"
         )
         
@@ -134,8 +144,6 @@ if total_filtrado_canal > 0:
             ]
             
             st.info(f"Filtro activo: Mostrando solo unidades en estado **{estado_seleccionado}**. Haz clic en un espacio vacío del gráfico para quitar el filtro.")
-
-st.divider()
 
 # ---------------- TABLA DE DETALLES FINAL ----------------
 col_a_nombre = df.columns[0]
