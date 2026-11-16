@@ -28,58 +28,180 @@ if "canal_seleccionado" not in st.session_state:
 
 st.title("Tablero de Estado de Vehículos")
 
-# ---------------- FILA 1: SECCIÓN MARCA ----------------
-st.subheader("MARCA")
-# Usamos columnas pequeñas a la izquierda para los botones, y dejamos el resto vacío
-col_b1, col_b2, espacio_vacio = st.columns([1, 1, 4]) 
+col_marca, col_canal = st.columns([1, 3])
 
-with col_b1:
-    tipo_p = "primary" if st.session_state.marca_seleccionada == "Peugeot" else "secondary"
-    if st.button("🚗 Peugeot", use_container_width=True, type=tipo_p):
-        st.session_state.marca_seleccionada = "Peugeot"
-        st.session_state.canal_seleccionado = "TODOS"
-        st.rerun()
+with col_marca:
+    st.subheader("MARCA")
+    b1, b2 = st.columns(2)
+    with b1:
+        tipo_p = "primary" if st.session_state.marca_seleccionada == "Peugeot" else "secondary"
+        if st.button("🚗 Peugeot", use_container_width=True, type=tipo_p):
+            st.session_state.marca_seleccionada = "Peugeot"
+            st.session_state.canal_seleccionado = "TODOS"
+            st.rerun()
+    with b2:
+        tipo_c = "primary" if st.session_state.marca_seleccionada == "Citroën" else "secondary"
+        if st.button("🚘 Citroën", use_container_width=True, type=tipo_c):
+            st.session_state.marca_seleccionada = "Citroën"
+            st.session_state.canal_seleccionado = "TODOS"
+            st.rerun()
 
-with col_b2:
-    tipo_c = "primary" if st.session_state.marca_seleccionada == "Citroën" else "secondary"
-    if st.button("🚘 Citroën", use_container_width=True, type=tipo_c):
-        st.session_state.marca_seleccionada = "Citroën"
-        st.session_state.canal_seleccionado = "TODOS"
-        st.rerun()
-
-
-# --- CARGA DE DATOS ---
 if st.session_state.marca_seleccionada == "Peugeot":
     df = cargar_datos(URL_PEUGEOT)
 else:
     df = cargar_datos(URL_CITROEN)
 
 col_canal_nombre = df.columns[letra_a_indice("E")]
+
 total_unidades = len(df)
 conteo_canales = df[col_canal_nombre].fillna("Sin especificar").astype(str).value_counts()
 
-st.write("") # Un pequeño espacio en blanco para separar
-
-# ---------------- FILA 2: SECCIÓN CANAL DE VENTA ----------------
-st.subheader(f"Canal de Venta — Total: {total_unidades} (100%)")
-
-num_botones = len(conteo_canales) + 1
-cols_botones = st.columns(num_botones)
-
-with cols_botones[0]:
-    tipo_todos = "primary" if st.session_state.canal_seleccionado == "TODOS" else "secondary"
-    if st.button(f"Todos\n{total_unidades} (100%)", use_container_width=True, type=tipo_todos):
-        st.session_state.canal_seleccionado = "TODOS"
-        st.rerun()
-        
-for idx, (canal, cantidad) in enumerate(conteo_canales.items(), start=1):
-    porcentaje = (cantidad / total_unidades * 100) if total_unidades > 0 else 0
-    etiqueta = f"{canal}\n{cantidad} ({porcentaje:.1f}%)"
-    tipo_btn = "primary" if st.session_state.canal_seleccionado == canal else "secondary"
+with col_canal:
+    st.subheader(f"Canal de Venta — Total: {total_unidades} (100%)")
     
-    with cols_botones[idx]:
-        if st.button(etiqueta, use_container_width=True, type=tipo_btn, key=f"btn_{canal}"):
-            st.session_state.canal_seleccionado = canal
+    num_botones = len(conteo_canales) + 1
+    cols_botones = st.columns(num_botones)
+    
+    with cols_botones[0]:
+        tipo_todos = "primary" if st.session_state.canal_seleccionado == "TODOS" else "secondary"
+        if st.button(f"Todos\n{total_unidades} (100%)", use_container_width=True, type=tipo_todos):
+            st.session_state.canal_seleccionado = "TODOS"
             st.rerun()
+            
+    for idx, (canal, cantidad) in enumerate(conteo_canales.items(), start=1):
+        porcentaje = (cantidad / total_unidades * 100) if total_unidades > 0 else 0
+        etiqueta = f"{canal}\n{cantidad} ({porcentaje:.1f}%)"
+        tipo_btn = "primary" if st.session_state.canal_seleccionado == canal else "secondary"
+        
+        with cols_botones[idx]:
+            if st.button(etiqueta, use_container_width=True, type=tipo_btn, key=f"btn_{canal}"):
+                st.session_state.canal_seleccionado = canal
+                st.rerun()
 
 st.divider()
+
+# ---------------- FILTRADO PRINCIPAL POR CANAL ----------------
+df_mostrar = df.copy()
+
+if st.session_state.canal_seleccionado != "TODOS":
+    df_mostrar = df_mostrar[
+        df_mostrar[col_canal_nombre].fillna("Sin especificar").astype(str) == st.session_state.canal_seleccionado
+    ]
+
+# ---------------- GRÁFICO DINÁMICO DESPLEGABLE (Columna K) ----------------
+# ---------------- GRÁFICO DINÁMICO DESPLEGABLE (Columna K) ----------------
+col_estado_nombre = df.columns[letra_a_indice("K")]
+total_filtrado_canal = len(df_mostrar)
+
+# NUEVO: Diccionario de colores para los estados
+mapa_colores = {
+    "Documents printed": "#85C1E9",  # Azul claro
+    "Accepted": "#F9E79F",           # Amarillo claro
+    "Consigned": "#ABEBC6",          # Verde claro
+    "Canceled": "#E74C3C",           # Rojo
+    "Sin especificar": "#D5D8DC"     # Gris por si hay algún campo vacío
+}
+
+if total_filtrado_canal > 0:
+    df_estados = df_mostrar[col_estado_nombre].fillna("Sin especificar").astype(str).value_counts().reset_index()
+    df_estados.columns = ['Estado', 'Cantidad']
+    
+    df_estados['Porcentaje'] = (df_estados['Cantidad'] / total_filtrado_canal * 100).round(1)
+    df_estados['Etiqueta'] = df_estados['Cantidad'].astype(str) + " (" + df_estados['Porcentaje'].astype(str) + "%)"
+    
+    with st.expander(f"📊 Ver distribución de Estados — Canal: {st.session_state.canal_seleccionado}", expanded=False):
+        
+        fig = px.bar(
+            df_estados, 
+            x='Estado', 
+            y='Cantidad', 
+            text='Etiqueta',
+            color='Estado', 
+            color_discrete_map=mapa_colores, # <-- Aquí aplicamos tu paleta de colores
+            template="plotly_white"
+        )
+        
+        fig.update_traces(textposition='outside')
+        fig.update_layout(
+            showlegend=False, 
+            xaxis_title="", 
+            yaxis_title="Cantidad de Unidades",
+            margin=dict(t=10, b=10)
+        )
+        
+        evento_grafico = st.plotly_chart(
+            fig, 
+            use_container_width=True, 
+            on_select="rerun", 
+            key="grafico_interactivo"
+        )
+
+        if evento_grafico and len(evento_grafico.selection.get("points", [])) > 0:
+            estado_seleccionado = evento_grafico.selection["points"][0]["x"]
+            
+            df_mostrar = df_mostrar[
+                df_mostrar[col_estado_nombre].fillna("Sin especificar").astype(str) == estado_seleccionado
+            ]
+            
+            st.info(f"Filtro activo: Mostrando solo unidades en estado **{estado_seleccionado}**. Haz clic en un espacio vacío del gráfico para quitar el filtro.")
+
+# ---------------- TABLA DE DETALLES FINAL ----------------
+col_a_nombre = df.columns[0]
+# Identificamos la columna del Chasis/VIN (asumiendo que es la H)
+col_vin_nombre = df.columns[letra_a_indice("I")]
+
+df_mostrar["Cliente"] = df_mostrar[col_a_nombre]
+
+# 1. Lógica de iconos evaluando Chasis y Estado
+def agregar_icono(fila):
+    estado = str(fila[col_estado_nombre]).strip()
+    vin = str(fila[col_vin_nombre]).strip()
+    
+    # Verificamos si la celda de VIN tiene datos reales
+    tiene_vin = vin != "" and vin.lower() != "nan" and vin.lower() != "none"
+    
+    if "Canceled" in estado:
+        return "❌ " + estado
+    elif tiene_vin:
+        return "✅ " + estado
+    elif "Accepted" in estado:
+        return "⏳ " + estado  # <-- ¡Acá está el reloj de arena!
+    else:
+        return estado
+# Aplicamos los iconos a la columna de estado antes de darle color
+df_mostrar[col_estado_nombre] = df_mostrar.apply(agregar_icono, axis=1)
+
+
+# 2. Preparamos las columnas a mostrar
+letras_columnas = ["B", "G", "H", "I", "K", "L", "M", "N", "AQ"]
+indices_columnas = [letra_a_indice(letra) for letra in letras_columnas]
+
+indices_validos = [i for i in indices_columnas if i < len(df_mostrar.columns)]
+columnas_finales = [df_mostrar.columns[i] for i in indices_validos]
+
+columnas_finales_con_cliente = ["Cliente"] + columnas_finales
+
+st.subheader(f"Detalle de Unidades — {st.session_state.marca_seleccionada} ({len(df_mostrar)} registros)")
+
+
+# 3. Ajustamos la función de color para que detecte el texto ignorando el emoji
+def colorear_estados(valor):
+    texto = str(valor)
+    if "Documents printed" in texto:
+        return "background-color: #85C1E9; color: black;"
+    elif "Accepted" in texto:
+        return "background-color: #F9E79F; color: black;"
+    elif "Consigned" in texto:
+        return "background-color: #ABEBC6; color: black;"
+    elif "Canceled" in texto:
+        return "background-color: #E74C3C; color: white;"
+    else:
+        return "background-color: #D5D8DC; color: black;"
+
+# 4. Aplicamos el estilo a la tabla
+df_estilizado = df_mostrar[columnas_finales_con_cliente].style.map(
+    colorear_estados, 
+    subset=[col_estado_nombre]
+)
+
+st.dataframe(df_estilizado, use_container_width=True, hide_index=True)
