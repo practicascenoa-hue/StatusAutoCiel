@@ -158,4 +158,23 @@ columnas_finales = [df_mostrar.columns[i] for i in indices_validos]
 columnas_finales_con_cliente = ["Cliente"] + columnas_finales
 
 st.subheader(f"Detalle de Unidades — {st.session_state.marca_seleccionada} ({len(df_mostrar)} registros)")
-st.dataframe(df_mostrar[columnas_finales_con_cliente], use_container_width=True, hide_index=True)
+
+# 1. Definimos la función que asigna el color CSS según el texto de la celda
+def colorear_estados(valor):
+    mapa_colores_css = {
+        "Documents printed": "background-color: #85C1E9; color: black;",
+        "Accepted": "background-color: #F9E79F; color: black;",
+        "Consigned": "background-color: #ABEBC6; color: black;",
+        "Canceled": "background-color: #E74C3C; color: white;", # Letra blanca para contrastar con el rojo
+        "Sin especificar": "background-color: #D5D8DC; color: black;"
+    }
+    return mapa_colores_css.get(str(valor).strip(), "")
+
+# 2. Aplicamos el estilo solo a la columna del estado (col_estado_nombre)
+df_estilizado = df_mostrar[columnas_finales_con_cliente].style.map(
+    colorear_estados, 
+    subset=[col_estado_nombre]
+)
+
+# 3. Mostramos el DataFrame estilizado
+st.dataframe(df_estilizado, use_container_width=True, hide_index=True)
